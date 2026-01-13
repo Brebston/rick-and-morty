@@ -1,7 +1,9 @@
 from random import choice
+from tkinter.font import names
 
 from django.db.models import QuerySet
 from django.shortcuts import render
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status
 
 from rest_framework.decorators import api_view
@@ -12,8 +14,12 @@ from characters.models import Character
 from characters.serializers import CharacterSerializer
 
 
+@extend_schema(
+    responses={status.HTTP_200_OK: CharacterSerializer},
+)
 @api_view(["GET"])
 def get_random_character_view(request: Request) -> Response:
+    """Get random character from Rick & Morty world"""
     pks = Character.objects.values_list("pk", flat=True)
     random_pk = choice(pks)
     random_character = Character.objects.get(pk=random_pk)
@@ -31,3 +37,17 @@ class CharacterListView(generics.ListAPIView):
         if name is not None:
             queryset = queryset.filter(name__icontains=name)
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                description="Filter by name insensitive contains",
+                required=False,
+                type=str,
+            ),
+        ]
+    )
+    def get(self, request, *args, **kwargs) -> Response:
+        """List character with filter by name"""
+        return super().get(request, *args, **kwargs)
